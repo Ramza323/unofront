@@ -5,6 +5,7 @@ import Card from './Card';
 import ColorPicker from './ColorPicker';
 import { canPlayClient, canStealClient, needsColorPick } from '../utils/rules';
 import { useCardScale, useIsMobile } from '../utils/useScreenSize';
+import { saveSession } from '../App';
 
 interface Props { room: RoomView; myId: string; }
 
@@ -17,8 +18,8 @@ export default function Game({ room, myId }: Props) {
   const game = room.game!;
   const players = game.players;
   const myIndex = players.findIndex(p => p.id === myId);
-  const me = players[myIndex];
-  const isMyTurn = game.currentPlayerIndex === myIndex;
+  const me = myIndex !== -1 ? players[myIndex] : null;
+  const isMyTurn = myIndex !== -1 && game.currentPlayerIndex === myIndex;
   const topCard = game.discardPile[game.discardPile.length - 1];
 
   const cardScale = useCardScale();
@@ -31,19 +32,36 @@ export default function Game({ room, myId }: Props) {
   const [notification, setNotification] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Persist session para reconexión
+  useEffect(() => {
+    if (room.id && me?.name) {
+      saveSession(room.id, me.name);
+    }
+  }, [room.id, me?.name]);
+
+  // Limpiar ColorPicker si cambia el turno o la steal window (evita zombie)
+  useEffect(() => {
+    setPendingCard(null);
+  }, [game.currentPlayerIndex, game.stealWindow]);
+
+  // Steal window countdown — se autolimpia al llegar a 0
   useEffect(() => {
     if (game.stealWindow) {
       const tick = () => {
         const remaining = Math.max(0, game.stealWindow!.expiresAt - Date.now());
         setStealCountdown(remaining);
+        if (remaining === 0 && timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
       };
       tick();
       timerRef.current = setInterval(tick, 50);
     } else {
       setStealCountdown(0);
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
   }, [game.stealWindow]);
 
   useEffect(() => {
@@ -51,6 +69,8 @@ export default function Game({ room, myId }: Props) {
       ['turn-stolen',       ({ byPlayerName }: any) => showNotif(`⚡ ${byPlayerName} robó el turno!`)],
       ['penalty-deflected', ({ type, amount }: any) => showNotif(type === 'block' ? `🛡️ Bloqueado! +${amount} al siguiente` : `↩️ Reversa! +${amount} devuelto`)],
       ['uno-penalty',       ({ playerName }: any) => showNotif(`😬 ${playerName} olvidó decir UNO! +2 cartas`)],
+      ['player-reconnected',({ name }: any) => showNotif(`✅ ${name} volvió`)],
+      ['player-disconnected',({ name }: any) => showNotif(`📵 ${name} se desconectó`)],
     ];
     handlers.forEach(([ev, fn]) => socket.on(ev, fn));
     return () => handlers.forEach(([ev, fn]) => socket.off(ev, fn));
@@ -63,20 +83,20 @@ export default function Game({ room, myId }: Props) {
 
   function playCard(card: CardType) {
     if (!isMyTurn) return;
-    if (!canPlayClient(card, topCard, game.penalty)) return;
+    if (!canPlayClient(card, topCard, game.penalty, game.declaredColor)) return;
     if (needsColorPick(card)) { setPendingCard(card); return; }
     socket.emit('play-card', { cardId: card.id });
   }
 
   function stealCard(card: CardType) {
     if (!game.stealWindow || game.stealWindow.byPlayerIndex === myIndex) return;
-    if (!canStealClient(card, game.stealWindow.card, game.penalty)) return;
+    if (!canStealClient(card, game.stealWindow.card, game.declaredColor, game.penalty)) return;
     if (needsColorPick(card)) { setPendingCard(card); return; }
     socket.emit('steal-card', { cardId: card.id });
   }
 
   function handleCardClick(card: CardType) {
-    if (game.stealWindow && game.stealWindow.byPlayerIndex !== myIndex) {
+    if (game.stealWindow && myIndex !== game.currentPlayerIndex) {
       stealCard(card);
     } else if (isMyTurn) {
       playCard(card);
@@ -85,7 +105,7 @@ export default function Game({ room, myId }: Props) {
 
   function handleColorPick(color: Color) {
     if (!pendingCard) return;
-    const isSteal = game.stealWindow && game.stealWindow.byPlayerIndex !== myIndex;
+    const isSteal = game.stealWindow && myIndex !== game.currentPlayerIndex;
     if (isSteal) {
       socket.emit('steal-card', { cardId: pendingCard.id, declaredColor: color });
     } else {
@@ -95,11 +115,11 @@ export default function Game({ room, myId }: Props) {
   }
 
   function isCardPlayable(card: CardType): boolean {
-    if (game.stealWindow && game.stealWindow.byPlayerIndex !== myIndex) {
-      return canStealClient(card, game.stealWindow.card, game.penalty);
+    if (game.stealWindow && myIndex !== game.currentPlayerIndex) {
+      return canStealClient(card, game.stealWindow.card, game.declaredColor, game.penalty);
     }
     if (!isMyTurn) return false;
-    return canPlayClient(card, topCard, game.penalty);
+    return canPlayClient(card, topCard, game.penalty, game.declaredColor);
   }
 
   if (game.winner) {
@@ -113,16 +133,27 @@ export default function Game({ room, myId }: Props) {
     );
   }
 
-  const currentPlayer = players[game.currentPlayerIndex];
+  // Guard: currentPlayerIndex puede ser out of bounds momentáneamente
+  const currentPlayer = players[game.currentPlayerIndex] ?? null;
   const otherPlayers = players.map((p, i) => ({ ...p, index: i })).filter(p => p.id !== myId);
-  const topColor = topCard?.color === 'wild' ? (game.penalty?.color ?? 'wild') : topCard?.color ?? 'wild';
+  const topColor = topCard
+    ? (topCard.color === 'wild' ? (game.declaredColor ?? game.penalty?.color ?? 'wild') : topCard.color)
+    : 'wild';
   const handHeight = isMobile ? Math.round(77 * cardScale * 1.33) + 28 : 140;
+
+  // Si soy un espectador (me = null), mostrar vista simplificada
+  if (!me) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16, padding: 16 }}>
+        <p style={{ color: '#aaa' }}>Reconectando a la partida...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0f172a', overflow: 'hidden' }}>
       {pendingCard && <ColorPicker onPick={handleColorPick} />}
 
-      {/* Notification */}
       {notification && (
         <div className="slide-up" style={{
           position: 'fixed', top: 8, left: '50%', transform: 'translateX(-50%)',
@@ -144,8 +175,7 @@ export default function Game({ room, myId }: Props) {
           <div style={{ width: 80, height: 5, background: '#0003', borderRadius: 3, flexShrink: 0 }}>
             <div style={{ height: '100%', background: '#111', borderRadius: 3, width: `${(stealCountdown / 1500) * 100}%`, transition: 'width 0.05s linear' }} />
           </div>
-          {game.stealWindow.byPlayerIndex !== myIndex &&
-            <span style={{ fontSize: '0.75rem' }}>¡Rápido!</span>}
+          {myIndex !== game.currentPlayerIndex && <span style={{ fontSize: '0.75rem' }}>¡Rápido!</span>}
         </div>
       )}
 
@@ -163,7 +193,7 @@ export default function Game({ room, myId }: Props) {
         </div>
       )}
 
-      {/* Other players — compact on mobile */}
+      {/* Other players */}
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: 6,
         padding: game.stealWindow ? '36px 10px 6px' : '10px 10px 6px',
@@ -178,10 +208,13 @@ export default function Game({ room, myId }: Props) {
               border: `2px solid ${isActive ? PLAYER_COLORS[globalIdx] : 'transparent'}`,
               borderRadius: 10, padding: isMobile ? '5px 8px' : '8px 12px',
               display: 'flex', alignItems: 'center', gap: 6,
+              opacity: p.connected ? 1 : 0.5,
             }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: PLAYER_COLORS[globalIdx], flexShrink: 0 }} />
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.connected ? PLAYER_COLORS[globalIdx] : '#666', flexShrink: 0 }} />
               <div>
-                <div style={{ fontWeight: 600, fontSize: isMobile ? '0.75rem' : '0.9rem', lineHeight: 1.2 }}>{p.name}</div>
+                <div style={{ fontWeight: 600, fontSize: isMobile ? '0.75rem' : '0.9rem', lineHeight: 1.2 }}>
+                  {p.name}{!p.connected && ' 📵'}
+                </div>
                 <div style={{ fontSize: '0.65rem', color: '#aaa' }}>
                   {p.cardCount} cartas {p.saidUno && <span style={{ color: '#e63946', fontWeight: 700 }}>UNO!</span>}
                 </div>
@@ -200,16 +233,16 @@ export default function Game({ room, myId }: Props) {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? 20 : 40, minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <div onClick={() => isMyTurn && socket.emit('draw-card')} style={{ cursor: isMyTurn ? 'pointer' : 'default' }}>
-            <Card facedown scale={centerScale} glow={isMyTurn && !me?.hand.some(c => isCardPlayable(c))} />
+            <Card facedown scale={centerScale} glow={isMyTurn && !me.hand.some(c => isCardPlayable(c))} />
           </div>
           <span style={{ fontSize: '0.7rem', color: '#aaa' }}>{game.deck}</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          {topCard && <Card card={topCard} scale={centerScale} declaredColor={game.penalty?.color} glow={!!game.stealWindow} />}
+          {topCard && <Card card={topCard} scale={centerScale} declaredColor={game.declaredColor ?? undefined} glow={!!game.stealWindow} />}
           <span style={{
             fontSize: '0.7rem', padding: '2px 8px', borderRadius: 20,
-            background: COLOR_BG[topColor], color: topColor === 'yellow' ? '#111' : '#fff', fontWeight: 700,
+            background: COLOR_BG[topColor] ?? '#555', color: topColor === 'yellow' ? '#111' : '#fff', fontWeight: 700,
           }}>{topColor}</span>
         </div>
       </div>
@@ -218,29 +251,20 @@ export default function Game({ room, myId }: Props) {
       <div style={{ textAlign: 'center', padding: '4px 8px', fontSize: isMobile ? '0.8rem' : '0.9rem', color: '#aaa', flexShrink: 0 }}>
         {isMyTurn
           ? <span style={{ color: '#06d6a0', fontWeight: 700 }}>Tu turno</span>
-          : <span>Turno de <strong>{currentPlayer?.name}</strong></span>}
+          : <span>Turno de <strong>{currentPlayer?.name ?? '...'}</strong>{!currentPlayer?.connected ? ' 📵' : ''}</span>}
         <span style={{ marginLeft: 8, opacity: 0.5 }}>{game.direction === 1 ? '→' : '←'}</span>
       </div>
 
       {/* My hand */}
       <div style={{
-        padding: '10px 10px 8px',
-        background: '#0a0f1e',
-        borderTop: '1px solid #1e3a5f',
-        display: 'flex',
-        gap: 6,
-        overflowX: 'auto',
-        overflowY: 'hidden',
-        alignItems: 'flex-end',
-        flexShrink: 0,
-        WebkitOverflowScrolling: 'touch' as any,
-        scrollbarWidth: 'none' as any,
+        padding: '10px 10px 8px', background: '#0a0f1e', borderTop: '1px solid #1e3a5f',
+        display: 'flex', gap: 6, overflowX: 'auto', overflowY: 'hidden',
+        alignItems: 'flex-end', flexShrink: 0,
+        WebkitOverflowScrolling: 'touch' as any, scrollbarWidth: 'none' as any,
       }}>
-        {me?.hand.map(card => (
+        {me.hand.map(card => (
           <Card
-            key={card.id}
-            card={card}
-            scale={cardScale}
+            key={card.id} card={card} scale={cardScale}
             playable={isCardPlayable(card)}
             onClick={() => handleCardClick(card)}
             glow={isCardPlayable(card) && (!!game.stealWindow || isMyTurn)}

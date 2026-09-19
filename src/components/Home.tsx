@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { socket } from '../socket';
+import { saveSession } from '../App';
 
 export default function Home() {
   const [name, setName] = useState('');
@@ -8,20 +9,30 @@ export default function Home() {
 
   const handleCreate = () => {
     if (!name.trim()) return;
+    saveSession('', name.trim()); // roomId se actualiza en room-joined
     socket.emit('create-room', { name: name.trim() });
   };
 
   const handleJoin = () => {
     if (!name.trim() || !roomId.trim()) return;
-    socket.emit('join-room', { roomId: roomId.trim().toUpperCase(), name: name.trim() });
+    const id = roomId.trim().toUpperCase();
+    saveSession(id, name.trim());
+    socket.emit('join-room', { roomId: id, name: name.trim() });
   };
 
+  // Detectar ?sala=XXXXX en URL para prellenar el código
+  useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sala = params.get('sala');
+    if (sala) { setRoomId(sala.toUpperCase()); setTab('join'); }
+  });
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 32 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 32, padding: 16 }}>
       <img src="/cartas.png" style={{ width: 80, height: 80, objectFit: 'none', objectPosition: '-5px -3px', borderRadius: 8 }} alt="UNO" />
       <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#e63946', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>UNO Online</h1>
 
-      <div style={{ background: '#16213e', padding: 32, borderRadius: 16, width: 340, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ background: '#16213e', padding: 32, borderRadius: 16, width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 16 }}>
         <input
           placeholder="Tu nombre"
           value={name}
@@ -57,7 +68,6 @@ export default function Home() {
           {tab === 'create' ? 'Crear sala' : 'Unirse a sala'}
         </button>
       </div>
-
       <p style={{ color: '#666', fontSize: '0.85rem' }}>Hasta 8 jugadores por sala</p>
     </div>
   );

@@ -12,6 +12,7 @@ export interface PlayerView {
   name: string;
   isReady: boolean;
   saidUno: boolean;
+  connected: boolean;
   cardCount: number;
   hand: Card[];
 }
@@ -27,6 +28,7 @@ export interface GameView {
   currentPlayerIndex: number;
   direction: 1 | -1;
   penalty: PenaltyStack | null;
+  declaredColor: Color | null;
   stealWindow: { card: Card; byPlayerIndex: number; expiresAt: number } | null;
   started: boolean;
   winner: string | null;
