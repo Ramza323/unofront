@@ -20,6 +20,7 @@ function canRespondToPenalty(card: Card, penalty: Penalty): boolean {
 
 export function canStealClient(card: Card, lastPlayed: Card, declaredColor: Color | null | undefined, penalty: Penalty): boolean {
   if (penalty) return canRespondToPenalty(card, penalty);
+  if ((card.value === 'wild' || card.value === 'wild4') && card.value === lastPlayed.value) return true;
   const effectiveColor: Color = (lastPlayed.value === 'wild' || lastPlayed.value === 'wild4')
     ? (declaredColor ?? lastPlayed.color)
     : lastPlayed.color;

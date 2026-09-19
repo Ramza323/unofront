@@ -96,9 +96,9 @@ export default function Game({ room, myId }: Props) {
   }
 
   function handleCardClick(card: CardType) {
-    if (game.stealWindow && myIndex !== game.currentPlayerIndex) {
+    if (game.stealWindow && myIndex !== game.stealWindow.byPlayerIndex) {
       stealCard(card);
-    } else if (isMyTurn) {
+    } else if (isMyTurn && !game.stealWindow) {
       playCard(card);
     }
   }
@@ -115,7 +115,8 @@ export default function Game({ room, myId }: Props) {
   }
 
   function isCardPlayable(card: CardType): boolean {
-    if (game.stealWindow && myIndex !== game.currentPlayerIndex) {
+    if (game.stealWindow) {
+      if (myIndex === game.stealWindow.byPlayerIndex) return false;
       return canStealClient(card, game.stealWindow.card, game.declaredColor, game.penalty);
     }
     if (!isMyTurn) return false;
@@ -233,7 +234,7 @@ export default function Game({ room, myId }: Props) {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? 20 : 40, minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <div onClick={() => isMyTurn && socket.emit('draw-card')} style={{ cursor: isMyTurn ? 'pointer' : 'default' }}>
-            <Card facedown scale={centerScale} glow={isMyTurn && !me.hand.some(c => isCardPlayable(c))} />
+            <Card facedown scale={centerScale} glow={isMyTurn && !game.stealWindow && !me.hand.some(c => isCardPlayable(c))} />
           </div>
           <span style={{ fontSize: '0.7rem', color: '#aaa' }}>{game.deck}</span>
         </div>
