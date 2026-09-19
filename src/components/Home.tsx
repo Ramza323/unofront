@@ -1,0 +1,64 @@
+import { useState } from 'react';
+import { socket } from '../socket';
+
+export default function Home() {
+  const [name, setName] = useState('');
+  const [roomId, setRoomId] = useState('');
+  const [tab, setTab] = useState<'create' | 'join'>('create');
+
+  const handleCreate = () => {
+    if (!name.trim()) return;
+    socket.emit('create-room', { name: name.trim() });
+  };
+
+  const handleJoin = () => {
+    if (!name.trim() || !roomId.trim()) return;
+    socket.emit('join-room', { roomId: roomId.trim().toUpperCase(), name: name.trim() });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 32 }}>
+      <img src="/cartas.png" style={{ width: 80, height: 80, objectFit: 'none', objectPosition: '-5px -3px', borderRadius: 8 }} alt="UNO" />
+      <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#e63946', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>UNO Online</h1>
+
+      <div style={{ background: '#16213e', padding: 32, borderRadius: 16, width: 340, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <input
+          placeholder="Tu nombre"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          maxLength={20}
+          onKeyDown={e => { if (e.key === 'Enter') tab === 'create' ? handleCreate() : handleJoin(); }}
+        />
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className={tab === 'create' ? 'btn-primary' : 'btn-secondary'} style={{ flex: 1 }} onClick={() => setTab('create')}>
+            Crear sala
+          </button>
+          <button className={tab === 'join' ? 'btn-primary' : 'btn-secondary'} style={{ flex: 1 }} onClick={() => setTab('join')}>
+            Unirse
+          </button>
+        </div>
+
+        {tab === 'join' && (
+          <input
+            placeholder="Código de sala (ej: AB3K7)"
+            value={roomId}
+            onChange={e => setRoomId(e.target.value.toUpperCase())}
+            maxLength={6}
+            onKeyDown={e => { if (e.key === 'Enter') handleJoin(); }}
+          />
+        )}
+
+        <button
+          className="btn-primary"
+          disabled={!name.trim() || (tab === 'join' && !roomId.trim())}
+          onClick={tab === 'create' ? handleCreate : handleJoin}
+        >
+          {tab === 'create' ? 'Crear sala' : 'Unirse a sala'}
+        </button>
+      </div>
+
+      <p style={{ color: '#666', fontSize: '0.85rem' }}>Hasta 8 jugadores por sala</p>
+    </div>
+  );
+}
