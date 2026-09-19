@@ -139,7 +139,7 @@ export default function Game({ room, myId }: Props) {
 
   function handleColorPick(color: Color) {
     if (!pendingCard) return;
-    const isSteal = game.stealWindow && myIndex !== game.currentPlayerIndex;
+    const isSteal = game.stealWindow && myIndex !== game.stealWindow.byPlayerIndex;
     if (isSteal) {
       socket.emit('steal-card', { cardId: pendingCard.id, declaredColor: color });
     } else {
@@ -210,7 +210,7 @@ export default function Game({ room, myId }: Props) {
           <div style={{ width: 80, height: 5, background: '#0003', borderRadius: 3, flexShrink: 0 }}>
             <div style={{ height: '100%', background: '#111', borderRadius: 3, width: `${(stealCountdown / 1500) * 100}%`, transition: 'width 0.05s linear' }} />
           </div>
-          {myIndex !== game.currentPlayerIndex && <span style={{ fontSize: '0.75rem' }}>¡Rápido!</span>}
+          {myIndex !== game.stealWindow.byPlayerIndex && <span style={{ fontSize: '0.75rem' }}>¡Rápido!</span>}
         </div>
       )}
 
