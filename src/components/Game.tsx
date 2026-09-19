@@ -6,6 +6,7 @@ import ColorPicker from './ColorPicker';
 import { canPlayClient, canStealClient, needsColorPick } from '../utils/rules';
 import { useCardScale, useIsMobile } from '../utils/useScreenSize';
 import { saveSession } from '../App';
+import { playCardSound, playDraw, playUno, playWin, playSteal, playGameStart, startMusic, stopMusic, setMusicMuted } from '../utils/sounds';
 
 interface Props { room: RoomView; myId: string; }
 
@@ -30,7 +31,10 @@ export default function Game({ room, myId }: Props) {
   const [pendingCard, setPendingCard] = useState<CardType | null>(null);
   const [stealCountdown, setStealCountdown] = useState(0);
   const [notification, setNotification] = useState('');
+  const [musicMuted, setMusicMutedState] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevTopCardIdRef = useRef<string | null>(null);
+  const prevHandLengthRef = useRef<number | null>(null);
 
   // Persist session para reconexión
   useEffect(() => {
@@ -38,6 +42,36 @@ export default function Game({ room, myId }: Props) {
       saveSession(room.id, me.name);
     }
   }, [room.id, me?.name]);
+
+  // Música de fondo — arranca al montar, para al desmontar
+  useEffect(() => {
+    playGameStart();
+    const t = setTimeout(() => startMusic(), 800);
+    return () => { clearTimeout(t); stopMusic(); };
+  }, []);
+
+  // Sonido al jugarse una carta (cualquier jugador)
+  useEffect(() => {
+    if (!topCard) return;
+    if (prevTopCardIdRef.current === null) { prevTopCardIdRef.current = topCard.id; return; }
+    if (prevTopCardIdRef.current !== topCard.id) {
+      prevTopCardIdRef.current = topCard.id;
+      playCardSound(topCard);
+    }
+  }, [topCard?.id]);
+
+  // Sonido al robar carta(s)
+  useEffect(() => {
+    if (!me) return;
+    if (prevHandLengthRef.current === null) { prevHandLengthRef.current = me.hand.length; return; }
+    if (me.hand.length > prevHandLengthRef.current) playDraw();
+    prevHandLengthRef.current = me.hand.length;
+  }, [me?.hand.length]);
+
+  // Sonido de victoria
+  useEffect(() => {
+    if (game.winner) { stopMusic(); playWin(); }
+  }, [game.winner]);
 
   // Limpiar ColorPicker si cambia el turno o la steal window (evita zombie)
   useEffect(() => {
@@ -66,7 +100,7 @@ export default function Game({ room, myId }: Props) {
 
   useEffect(() => {
     const handlers: Array<[string, (...args: any[]) => void]> = [
-      ['turn-stolen',       ({ byPlayerName }: any) => showNotif(`⚡ ${byPlayerName} robó el turno!`)],
+      ['turn-stolen',       ({ byPlayerName }: any) => { showNotif(`⚡ ${byPlayerName} robó el turno!`); playSteal(); }],
       ['penalty-deflected', ({ type, amount }: any) => showNotif(type === 'block' ? `🛡️ Bloqueado! +${amount} al siguiente` : `↩️ Reversa! +${amount} devuelto`)],
       ['uno-penalty',       ({ playerName }: any) => showNotif(`😬 ${playerName} olvidó decir UNO! +2 cartas`)],
       ['player-reconnected',({ name }: any) => showNotif(`✅ ${name} volvió`)],
@@ -273,14 +307,21 @@ export default function Game({ room, myId }: Props) {
         ))}
       </div>
 
-      {/* UNO button */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 10px', background: '#0a0f1e', flexShrink: 0 }}>
+      {/* UNO button + mute */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, padding: '6px 0 10px', background: '#0a0f1e', flexShrink: 0 }}>
         <button
           className="btn-primary"
           style={{ fontWeight: 900, fontSize: '1rem', letterSpacing: 2, padding: '8px 28px', borderRadius: 20, minHeight: 44 }}
-          onClick={() => socket.emit('say-uno')}
+          onClick={() => { socket.emit('say-uno'); playUno(); }}
         >
           UNO!
+        </button>
+        <button
+          style={{ background: 'none', border: '1px solid #333', borderRadius: 8, padding: '6px 10px', color: '#aaa', fontSize: '1.1rem', cursor: 'pointer', minHeight: 44 }}
+          onClick={() => { const next = !musicMuted; setMusicMutedState(next); setMusicMuted(next); }}
+          title={musicMuted ? 'Activar música' : 'Silenciar música'}
+        >
+          {musicMuted ? '🔇' : '🎵'}
         </button>
       </div>
     </div>
