@@ -19,15 +19,16 @@ export default function ColorPicker({ onPick }: Props) {
     }}>
       <div style={{ background: '#16213e', padding: 32, borderRadius: 16, textAlign: 'center' }}>
         <h2 style={{ marginBottom: 24, color: '#eee' }}>Elige un color</h2>
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
           {COLORS.map(c => (
             <button
               key={c.color}
               onClick={() => onPick(c.color)}
               style={{
                 background: c.bg, color: c.color === 'yellow' ? '#111' : '#fff',
-                width: 80, height: 80, borderRadius: 12,
-                fontSize: '0.85rem', fontWeight: 700,
+                width: 'min(80px, 20vw)', height: 'min(80px, 20vw)',
+                minWidth: 64, minHeight: 64,
+                borderRadius: 12, fontSize: '0.8rem', fontWeight: 700,
               }}
             >
               {c.label}
