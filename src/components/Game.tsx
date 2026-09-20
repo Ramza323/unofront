@@ -159,11 +159,18 @@ export default function Game({ room, myId }: Props) {
 
   if (game.winner) {
     const winner = players.find(p => p.id === game.winner);
+    const isHost = room.hostId === myId;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 24, padding: 16 }}>
-        <div style={{ fontSize: '4rem' }}>🎉</div>
-        <h1 style={{ color: '#e63946', fontSize: '2rem', textAlign: 'center' }}>{winner?.name ?? 'Alguien'} ganó!</h1>
-        {game.winner === myId && <p style={{ color: '#06d6a0', fontSize: '1.2rem' }}>¡Felicitaciones!</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 24, padding: 16, background: '#0f172a' }}>
+        <div style={{ fontSize: '5rem' }}>🎉</div>
+        <h1 style={{ color: '#e63946', fontSize: '2.2rem', textAlign: 'center', margin: 0 }}>{winner?.name ?? 'Alguien'} ganó!</h1>
+        {game.winner === myId && <p style={{ color: '#06d6a0', fontSize: '1.2rem', margin: 0 }}>¡Felicitaciones!</p>}
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          {isHost
+            ? <button className="btn-primary" style={{ fontSize: '1rem', padding: '10px 32px', borderRadius: 20 }} onClick={() => socket.emit('force-end-game')}>Nueva partida</button>
+            : <p style={{ color: '#666', fontSize: '0.9rem' }}>Esperando que el host inicie nueva partida...</p>
+          }
+        </div>
       </div>
     );
   }
