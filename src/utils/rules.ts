@@ -14,8 +14,9 @@ export function canPlayClient(card: Card, topCard: Card, penalty: Penalty, decla
 function canRespondToPenalty(card: Card, penalty: Penalty): boolean {
   if (!penalty) return false;
   if (card.value === 'wild4') return true;
+  if (card.value === 'draw2') return true;
   if (card.color !== penalty.color) return false;
-  return card.value === 'draw2' || card.value === 'skip' || card.value === 'reverse';
+  return card.value === 'skip' || card.value === 'reverse';
 }
 
 export function canStealClient(card: Card, lastPlayed: Card, declaredColor: Color | null | undefined, penalty: Penalty): boolean {
