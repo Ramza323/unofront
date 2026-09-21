@@ -114,7 +114,7 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <div style={{ position: 'fixed', bottom: 6, left: 10, fontSize: '0.65rem', color: '#333', zIndex: 1, pointerEvents: 'none', userSelect: 'none' }}>
+      <div style={{ position: 'fixed', bottom: 6, left: 10, fontSize: '0.65rem', color: '#888', zIndex: 1, pointerEvents: 'none', userSelect: 'none' }}>
         UI {UI_VERSION} · BK {bkVersion}
       </div>
       {error && (
