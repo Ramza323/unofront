@@ -28,6 +28,11 @@ export function canStealClient(card: Card, lastPlayed: Card, declaredColor: Colo
   return card.color === effectiveColor && card.value === lastPlayed.value;
 }
 
+export function canSelfStealClient(card: Card, lastPlayed: Card): boolean {
+  if (card.value === 'wild' || card.value === 'wild4') return false;
+  return card.value === lastPlayed.value && card.color === lastPlayed.color;
+}
+
 export function needsColorPick(card: Card): boolean {
   return card.value === 'wild' || card.value === 'wild4';
 }

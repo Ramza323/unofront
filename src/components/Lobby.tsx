@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { socket } from '../socket';
 import { RoomView } from '../types';
+import { startMusic } from '../utils/sounds';
 
 interface Props { room: RoomView; myId: string; }
 
@@ -17,13 +18,15 @@ export default function Lobby({ room, myId }: Props) {
     setEditing(false);
   };
 
+  useEffect(() => { startMusic(); }, []);
+
   const colorFor = (i: number) => ['#e63946','#2ec4b6','#f4a261','#a8dadc','#8338ec','#06d6a0','#fb5607','#ffbe0b'][i % 8];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 24, padding: 24 }}>
       <h1 style={{ fontSize: '2rem', color: '#e63946' }}>Sala de Espera</h1>
 
-      <div style={{ background: '#16213e', padding: 12, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: 12, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12, border: '1px solid rgba(255,255,255,0.07)' }}>
         <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Código de sala:</span>
         <span style={{ fontFamily: 'monospace', fontSize: '1.4rem', fontWeight: 900, color: '#e63946', letterSpacing: 4 }}>{room.id}</span>
         <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }}
@@ -32,7 +35,7 @@ export default function Lobby({ room, myId }: Props) {
         </button>
       </div>
 
-      <div style={{ background: '#16213e', padding: 24, borderRadius: 16, width: '100%', maxWidth: 440 }}>
+      <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: 24, borderRadius: 16, width: '100%', maxWidth: 440, border: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ marginBottom: 16 }}>
           {editing ? (
             <div style={{ display: 'flex', gap: 8 }}>
@@ -57,7 +60,7 @@ export default function Lobby({ room, myId }: Props) {
             <div key={p.id} style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 14px', borderRadius: 8,
-              background: p.id === myId ? '#1f2b5e' : '#0f172a',
+              background: p.id === myId ? 'rgba(31,43,94,0.7)' : 'rgba(0,0,0,0.3)',
             }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: colorFor(i), flexShrink: 0 }} />
               <span style={{ flex: 1 }}>{p.name}{p.id === room.hostId ? ' 👑' : ''}</span>

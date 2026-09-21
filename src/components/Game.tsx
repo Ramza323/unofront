@@ -3,7 +3,7 @@ import { socket } from '../socket';
 import { Card as CardType, Color, RoomView } from '../types';
 import Card from './Card';
 import ColorPicker from './ColorPicker';
-import { canPlayClient, canStealClient, needsColorPick } from '../utils/rules';
+import { canPlayClient, canStealClient, canSelfStealClient, needsColorPick } from '../utils/rules';
 import { useCardScale, useIsMobile } from '../utils/useScreenSize';
 import { saveSession } from '../App';
 import { playCardSound, playDraw, playUno, playWin, playSteal, playGameStart, startMusic, stopMusic, setMusicMuted } from '../utils/sounds';
@@ -123,16 +123,22 @@ export default function Game({ room, myId }: Props) {
   }
 
   function stealCard(card: CardType) {
-    if (!game.stealWindow || game.stealWindow.byPlayerIndex === myIndex) return;
+    if (!game.stealWindow) return;
+    const isSelf = myIndex === game.stealWindow.byPlayerIndex;
+    if (isSelf) {
+      if (!canSelfStealClient(card, game.stealWindow.card)) return;
+      socket.emit('steal-card', { cardId: card.id });
+      return;
+    }
     if (!canStealClient(card, game.stealWindow.card, game.declaredColor, game.penalty)) return;
     if (needsColorPick(card)) { setPendingCard(card); return; }
     socket.emit('steal-card', { cardId: card.id });
   }
 
   function handleCardClick(card: CardType) {
-    if (game.stealWindow && myIndex !== game.stealWindow.byPlayerIndex) {
+    if (game.stealWindow) {
       stealCard(card);
-    } else if (isMyTurn && !game.stealWindow) {
+    } else if (isMyTurn) {
       playCard(card);
     }
   }
@@ -150,7 +156,7 @@ export default function Game({ room, myId }: Props) {
 
   function isCardPlayable(card: CardType): boolean {
     if (game.stealWindow) {
-      if (myIndex === game.stealWindow.byPlayerIndex) return false;
+      if (myIndex === game.stealWindow.byPlayerIndex) return canSelfStealClient(card, game.stealWindow.card);
       return canStealClient(card, game.stealWindow.card, game.declaredColor, game.penalty);
     }
     if (!isMyTurn) return false;
@@ -161,7 +167,7 @@ export default function Game({ room, myId }: Props) {
     const winner = players.find(p => p.id === game.winner);
     const isHost = room.hostId === myId;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 24, padding: 16, background: '#0f172a' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 24, padding: 16 }}>
         <div style={{ fontSize: '5rem' }}>🎉</div>
         <h1 style={{ color: '#e63946', fontSize: '2.2rem', textAlign: 'center', margin: 0 }}>{winner?.name ?? 'Alguien'} ganó!</h1>
         {game.winner === myId && <p style={{ color: '#06d6a0', fontSize: '1.2rem', margin: 0 }}>¡Felicitaciones!</p>}
@@ -186,14 +192,16 @@ export default function Game({ room, myId }: Props) {
   // Si soy un espectador (me = null), mostrar vista simplificada
   if (!me) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', flexDirection: 'column', gap: 16, padding: 16 }}>
         <p style={{ color: '#aaa' }}>Reconectando a la partida...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#0f172a', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      boxShadow: 'inset 0 0 80px rgba(0,0,0,0.7)',
+    }}>
       {pendingCard && <ColorPicker onPick={handleColorPick} />}
 
       {notification && (
@@ -209,15 +217,18 @@ export default function Game({ room, myId }: Props) {
       {game.stealWindow && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0,
-          background: '#ffd60a', color: '#111', padding: isMobile ? '6px 10px' : '8px 16px',
+          background: myIndex === game.stealWindow.byPlayerIndex ? '#06d6a0' : '#ffd60a',
+          color: '#111', padding: isMobile ? '6px 10px' : '8px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           fontWeight: 700, fontSize: isMobile ? '0.85rem' : '1rem', zIndex: 500,
         }}>
-          <span>⚡ ROBAR TURNO</span>
+          <span>{myIndex === game.stealWindow.byPlayerIndex ? '⚡ DOBLE JUGADA' : '⚡ ROBAR TURNO'}</span>
           <div style={{ width: 80, height: 5, background: '#0003', borderRadius: 3, flexShrink: 0 }}>
             <div style={{ height: '100%', background: '#111', borderRadius: 3, width: `${(stealCountdown / 1500) * 100}%`, transition: 'width 0.05s linear' }} />
           </div>
-          {myIndex !== game.stealWindow.byPlayerIndex && <span style={{ fontSize: '0.75rem' }}>¡Rápido!</span>}
+          <span style={{ fontSize: '0.75rem' }}>
+            {myIndex === game.stealWindow.byPlayerIndex ? '¡Carta idéntica!' : '¡Rápido!'}
+          </span>
         </div>
       )}
 
@@ -299,7 +310,7 @@ export default function Game({ room, myId }: Props) {
 
       {/* My hand */}
       <div style={{
-        padding: '10px 10px 8px', background: '#0a0f1e', borderTop: '1px solid #1e3a5f',
+        padding: '10px 10px 8px', background: 'rgba(0,0,0,0.45)', borderTop: '1px solid rgba(255,255,255,0.07)',
         display: 'flex', gap: 6, overflowX: 'auto', overflowY: 'hidden',
         alignItems: 'flex-end', flexShrink: 0,
         WebkitOverflowScrolling: 'touch' as any, scrollbarWidth: 'none' as any,

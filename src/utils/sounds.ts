@@ -21,7 +21,7 @@ const sfx = {
   deal:      mk('/sounds/Uno_SFX_Card_Deal_Comm_01.wav', 0.6),
   uno:       mk('/sounds/uno.mp3', 1),
   win:       mk('/sounds/SFX_UI_Victory_Token_04.wav', 0.9),
-  steal:     mk('/sounds/SFX_Card_Pick.wav', 0.8),
+  steal:     mk('/sounds/M_19_No.wav', 0.9),
   gameStart: mk('/sounds/Uno_SFX_Gamestart_02.wav', 0.7),
 };
 
@@ -49,6 +49,6 @@ export function playSteal()     { play(sfx.steal); }
 export function playGameStart() { play(sfx.gameStart); }
 export function playDeal()      { play(sfx.deal); }
 
-export function startMusic() { music.play().catch(() => {}); }
+export function startMusic() { if (music.paused) music.play().catch(() => {}); }
 export function stopMusic()  { music.pause(); music.currentTime = 0; }
 export function setMusicMuted(m: boolean) { music.muted = m; }

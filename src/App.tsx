@@ -113,7 +113,7 @@ export default function App() {
   }, [error]);
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', background: 'radial-gradient(ellipse at 50% 42%, #1e4d30 0%, #122b1c 55%, #0a1a10 100%)' }}>
       <div style={{ position: 'fixed', bottom: 6, left: 10, fontSize: '0.65rem', color: '#888', zIndex: 1, pointerEvents: 'none', userSelect: 'none' }}>
         UI {UI_VERSION} · BK {bkVersion}
       </div>

@@ -32,7 +32,7 @@ export default function Home() {
       <img src="/cartas.png" style={{ width: 80, height: 80, objectFit: 'none', objectPosition: '-5px -3px', borderRadius: 8 }} alt="UNO" />
       <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#e63946', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>UNO Online</h1>
 
-      <div style={{ background: '#16213e', padding: 32, borderRadius: 16, width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: 32, borderRadius: 16, width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid rgba(255,255,255,0.07)' }}>
         <input
           placeholder="Tu nombre"
           value={name}
