@@ -4,6 +4,9 @@ import { RoomView } from './types';
 import Home from './components/Home';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
+import { UI_VERSION } from './version';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3001';
 
 type Screen = 'home' | 'lobby' | 'game';
 
@@ -28,9 +31,17 @@ export default function App() {
   const [myId, setMyId] = useState('');
   const [error, setError] = useState('');
   const [reconnecting, setReconnecting] = useState(false);
+  const [bkVersion, setBkVersion] = useState<string>('...');
   const screenRef = useRef<Screen>('home');
 
   useEffect(() => { screenRef.current = screen; }, [screen]);
+
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/version`)
+      .then(r => r.json())
+      .then(d => setBkVersion(d.version))
+      .catch(() => setBkVersion('?'));
+  }, []);
 
   useEffect(() => {
     socket.connect();
@@ -103,6 +114,9 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
+      <div style={{ position: 'fixed', bottom: 6, right: 10, fontSize: '0.65rem', color: '#333', zIndex: 1, pointerEvents: 'none', userSelect: 'none' }}>
+        UI {UI_VERSION} · BK {bkVersion}
+      </div>
       {error && (
         <div style={{
           position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
