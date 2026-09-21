@@ -11,7 +11,8 @@ export default function Lobby({ room, myId }: Props) {
 
   const me = room.players.find(p => p.id === myId);
   const isHost = room.hostId === myId;
-  const allReady = room.players.length >= 2 && room.players.every(p => p.isReady || p.id === room.hostId);
+  const connectedCount = room.players.filter(p => p.connected).length;
+  const allReady = connectedCount >= 2 && room.players.every(p => p.isReady || p.id === room.hostId);
 
   const saveName = () => {
     if (editingName.trim()) socket.emit('change-name', { name: editingName.trim() });
@@ -80,13 +81,13 @@ export default function Lobby({ room, myId }: Props) {
           )}
           {isHost && (
             <button className="btn-primary" style={{ flex: 1 }}
-              disabled={room.players.length < 2}
+              disabled={connectedCount < 2}
               onClick={() => socket.emit('start-game')}>
-              {room.players.length < 2 ? 'Esperando jugadores...' : 'Iniciar juego'}
+              {connectedCount < 2 ? 'Esperando jugadores...' : 'Iniciar juego'}
             </button>
           )}
         </div>
-        {room.players.length < 2 && <p style={{ color: '#666', fontSize: '0.8rem', marginTop: 8, textAlign: 'center' }}>Se necesitan al menos 2 jugadores</p>}
+        {connectedCount < 2 && <p style={{ color: '#666', fontSize: '0.8rem', marginTop: 8, textAlign: 'center' }}>Se necesitan al menos 2 jugadores</p>}
       </div>
     </div>
   );
