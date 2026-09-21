@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { socket } from '../socket';
 import { saveSession } from '../App';
+import { startMusic } from '../utils/sounds';
 
 export default function Home() {
   const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
+
+  useEffect(() => {
+    startMusic();
+    const tryPlay = () => startMusic();
+    document.addEventListener('pointerdown', tryPlay, { once: true });
+    return () => document.removeEventListener('pointerdown', tryPlay);
+  }, []);
 
   const handleCreate = () => {
     if (!name.trim()) return;
