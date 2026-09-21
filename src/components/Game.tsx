@@ -101,6 +101,7 @@ export default function Game({ room, myId }: Props) {
   useEffect(() => {
     const handlers: Array<[string, (...args: any[]) => void]> = [
       ['turn-stolen',       ({ byPlayerName }: any) => { showNotif(`⚡ ${byPlayerName} robó el turno!`); playSteal(); }],
+      ['uno-said',          ({ playerId, playerName }: any) => { if (playerId !== myId) playUno(); showNotif(`🃏 ${playerName} dijo UNO!`); }],
       ['penalty-deflected', ({ type, amount }: any) => showNotif(type === 'block' ? `🛡️ Bloqueado! +${amount} al siguiente` : `↩️ Reversa! +${amount} devuelto`)],
       ['uno-penalty',       ({ playerName }: any) => showNotif(`😬 ${playerName} olvidó decir UNO! +2 cartas`)],
       ['player-reconnected',({ name }: any) => showNotif(`✅ ${name} volvió`)],
