@@ -1,6 +1,6 @@
 import { Card, Color } from '../types';
 
-type Penalty = { amount: number; color: Color } | null;
+type Penalty = { amount: number; color: Color; source: 'draw2' | 'wild4' } | null;
 
 export function canPlayClient(card: Card, topCard: Card, penalty: Penalty, declaredColor?: Color | null): boolean {
   if (penalty) return canRespondToPenalty(card, penalty);
@@ -14,7 +14,9 @@ export function canPlayClient(card: Card, topCard: Card, penalty: Penalty, decla
 function canRespondToPenalty(card: Card, penalty: Penalty): boolean {
   if (!penalty) return false;
   if (card.value === 'wild4') return true;
-  if (card.value === 'draw2') return true;
+  if (card.value === 'draw2') {
+    return penalty.source === 'draw2' || card.color === penalty.color;
+  }
   if (card.color !== penalty.color) return false;
   return card.value === 'skip' || card.value === 'reverse';
 }
