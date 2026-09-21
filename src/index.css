@@ -74,3 +74,20 @@ input:focus { border-color: #e63946; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 .slide-up { animation: slideUp 0.3s ease; }
+
+@keyframes cardPlay {
+  0%   { transform: translateY(60px) scale(0.6) rotate(-18deg); opacity: 0; }
+  100% { transform: translateY(0)    scale(1)   rotate(0deg);   opacity: 1; }
+}
+.card-play-wrapper {
+  animation: cardPlay 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes cardDraw {
+  0%   { transform: translateY(22px) scale(0.82); opacity: 0; }
+  100% { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+.card-draw-wrapper {
+  animation: cardDraw 0.2s ease-out forwards;
+  flex-shrink: 0;
+}

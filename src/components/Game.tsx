@@ -292,7 +292,11 @@ export default function Game({ room, myId }: Props) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          {topCard && <Card card={topCard} scale={centerScale} declaredColor={game.declaredColor ?? undefined} glow={!!game.stealWindow} />}
+          {topCard && (
+            <div key={topCard.id} className="card-play-wrapper">
+              <Card card={topCard} scale={centerScale} declaredColor={game.declaredColor ?? undefined} glow={!!game.stealWindow} />
+            </div>
+          )}
           <span style={{
             fontSize: '0.7rem', padding: '2px 8px', borderRadius: 20,
             background: COLOR_BG[topColor] ?? '#555', color: topColor === 'yellow' ? '#111' : '#fff', fontWeight: 700,
@@ -316,12 +320,14 @@ export default function Game({ room, myId }: Props) {
         WebkitOverflowScrolling: 'touch' as any, scrollbarWidth: 'none' as any,
       }}>
         {me.hand.map(card => (
-          <Card
-            key={card.id} card={card} scale={cardScale}
-            playable={isCardPlayable(card)}
-            onClick={() => handleCardClick(card)}
-            glow={isCardPlayable(card) && (!!game.stealWindow || isMyTurn)}
-          />
+          <div key={card.id} className="card-draw-wrapper">
+            <Card
+              card={card} scale={cardScale}
+              playable={isCardPlayable(card)}
+              onClick={() => handleCardClick(card)}
+              glow={isCardPlayable(card) && (!!game.stealWindow || isMyTurn)}
+            />
+          </div>
         ))}
       </div>
 
