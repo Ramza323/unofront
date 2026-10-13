@@ -3,10 +3,16 @@ import { socket } from '../socket';
 import { saveSession } from '../App';
 import { startMusic } from '../utils/sounds';
 
+const FAREWELL_START = new Date('2026-10-13T11:30:00');
+const FAREWELL_END   = new Date('2026-10-20T23:59:59');
+
 export default function Home() {
   const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [tab, setTab] = useState<'create' | 'join'>('create');
+
+  const now = new Date();
+  const showFarewell = now >= FAREWELL_START && now <= FAREWELL_END;
 
   useEffect(() => {
     startMusic();
@@ -39,6 +45,24 @@ export default function Home() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 32, padding: 16 }}>
       <img src="/cartas.png" style={{ width: 80, height: 80, objectFit: 'none', objectPosition: '-5px -3px', borderRadius: 8 }} alt="UNO" />
       <h1 style={{ fontSize: '3rem', fontWeight: 900, color: '#e63946', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>UNO Online</h1>
+
+      {showFarewell && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(230,57,70,0.15), rgba(255,200,50,0.15))',
+          border: '1px solid rgba(230,57,70,0.5)',
+          borderRadius: 16,
+          padding: '18px 28px',
+          maxWidth: 380,
+          textAlign: 'center',
+          backdropFilter: 'blur(6px)',
+          animation: 'fadeInUp 0.8s ease both',
+        }}>
+          <p style={{ fontSize: '1.05rem', color: '#fff', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+            💛 Fue un placer trabajar con ustedes,<br />
+            los quiero y los voy a extrañar mucho 💛
+          </p>
+        </div>
+      )}
 
       <div style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: 32, borderRadius: 16, width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid rgba(255,255,255,0.07)' }}>
         <input
